@@ -300,4 +300,21 @@ class ApiService {
       return [];
     }
   }
+
+  static Future<double?> fetchWalletBalance() async {
+    try {
+      final url = Uri.parse('$baseUrl/payments/wallet-balance');
+      final response = await http.get(
+        url,
+        headers: await _headersWithToken,
+      ).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return double.tryParse(response.body);
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  }
 }

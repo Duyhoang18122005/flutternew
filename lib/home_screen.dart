@@ -45,10 +45,14 @@ class _HomeScreenState extends State<HomeScreen> {
     'Asia', 'VN', 'KR', 'NA', 'EU',
   ];
 
+  List<dynamic> games = [];
+  bool isLoadingGames = true;
+
   @override
   void initState() {
     super.initState();
     loadPlayers();
+    loadGames();
   }
 
   Future<void> loadPlayers() async {
@@ -56,6 +60,17 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       players = data;
       isLoading = false;
+    });
+  }
+
+  Future<void> loadGames() async {
+    setState(() {
+      isLoadingGames = true;
+    });
+    final data = await ApiService.fetchGames();
+    setState(() {
+      games = data;
+      isLoadingGames = false;
     });
   }
 
@@ -427,15 +442,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 12),
                   SizedBox(
                     height: 100,
-                    child: ListView(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      children: const [
-                        _GameIcon(title: 'PUBG Mobile', icon: Icons.sports_motorsports),
-                        _GameIcon(title: 'PUBG PC', icon: Icons.sports_esports),
-                        _GameIcon(title: 'Liên Quân Mobile', icon: Icons.sports_handball),
-                      ],
-                    ),
+                    child: isLoadingGames
+                        ? Center(child: CircularProgressIndicator())
+                        : ListView(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            children: games.map<Widget>((game) {
+                              IconData iconData = Icons.sports_esports;
+                              final name = (game['name'] ?? '').toLowerCase();
+                              if (name.contains('pubg') && name.contains('mobile')) {
+                                iconData = Icons.sports_motorsports;
+                              } else if (name.contains('pubg')) {
+                                iconData = Icons.sports_esports;
+                              } else if (name.contains('liên quân')) {
+                                iconData = Icons.sports_handball;
+                              }
+                              return _GameIcon(
+                                title: game['name'] ?? '',
+                                icon: iconData,
+                              );
+                            }).toList(),
+                          ),
                   ),
                   // VIP Player hoặc Kết quả tìm kiếm
                   Padding(

@@ -14,11 +14,14 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String userId = '';
   bool isLoading = true;
+  double? walletBalance;
+  bool isLoadingBalance = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserInfo();
+    _loadWalletBalance();
   }
 
   Future<void> _loadUserInfo() async {
@@ -27,6 +30,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       setState(() {
         userId = userInfo?['id']?.toString() ?? '';
         isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadWalletBalance() async {
+    final balance = await ApiService.fetchWalletBalance();
+    if (mounted) {
+      setState(() {
+        walletBalance = balance;
+        isLoadingBalance = false;
       });
     }
   }
@@ -119,7 +132,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     const Text("Thông tin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18, color: Colors.black54)),
                     const SizedBox(height: 16),
-                    _InfoRow(icon: Icons.account_balance_wallet, label: "Số dư trong ví", value: "0đ"),
+                    _InfoRow(
+                      icon: Icons.account_balance_wallet,
+                      label: "Số dư trong ví",
+                      value: isLoadingBalance
+                        ? null
+                        : (walletBalance != null ? '${walletBalance!.toStringAsFixed(0)}đ' : 'Lỗi'),
+                    ),
                     const SizedBox(height: 8),
                     _InfoRow(icon: Icons.balance, label: "Biến động số dư"),
                     const SizedBox(height: 8),
