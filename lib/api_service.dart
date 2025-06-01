@@ -199,7 +199,7 @@ class ApiService {
 
   static Future<Map<String, dynamic>?> getCurrentUser() async {
     if (_currentUser != null) return _currentUser;
-    
+
     try {
       final userJson = await storage.read(key: 'user');
       if (userJson != null) {
@@ -316,5 +316,144 @@ class ApiService {
     } catch (e) {
       return null;
     }
+  }
+
+  static Future<Map<String, dynamic>?> deposit(double amount, String method) async {
+    final token = await getToken();
+    final url = Uri.parse('$baseUrl/payments/deposit');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'amount': amount,
+        'method': method,
+      }),
+    ).timeout(timeout);
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception(jsonDecode(response.body)['message'] ?? 'Nạp tiền thất bại');
+    }
+  }
+
+  static Future<Map<String, dynamic>?> processPayment(String transactionId) async {
+    try {
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/payments/process');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'transactionId': transactionId,
+        }),
+      ).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception(jsonDecode(response.body)['message'] ?? 'Xử lý thanh toán thất bại');
+      }
+    } catch (e) {
+      print('Lỗi khi xử lý thanh toán: ${e.toString()}');
+      return null;
+    }
+  }
+
+  static Future<String?> topUp(double amount) async {
+    try {
+      final token = await getToken();
+      final url = Uri.parse('$baseUrl/payments/topup');
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'amount': amount,
+        }),
+      ).timeout(timeout);
+
+      if (response.statusCode == 200) {
+        return null; // Thành công
+      } else {
+        final error = jsonDecode(response.body);
+        return error['message'] ?? 'Nạp tiền thất bại';
+      }
+    } catch (e) {
+      print('Lỗi khi nạp tiền: ${e.toString()}');
+      return 'Đã xảy ra lỗi: ${e.toString()}';
+    }
+  }
+
+  static Future<int> fetchFollowerCount(int playerId) async {
+    final url = Uri.parse('$baseUrl/players/$playerId/followers/count');
+    final response = await http.get(url).timeout(timeout);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['followerCount'] ?? 0;
+    }
+    return 0;
+  }
+
+  static Future<int> fetchHireHours(int playerId) async {
+    final url = Uri.parse('$baseUrl/players/$playerId/hire-hours');
+    final response = await http.get(url).timeout(timeout);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['totalHireHours'] ?? 0;
+    }
+    return 0;
+  }
+
+  static Future<bool> followPlayer(int playerId) async {
+    final token = await getToken();
+    final url = Uri.parse('$baseUrl/players/$playerId/follow');
+    print('[LOG] Gửi POST follow tới $url với token: ${token != null}');
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    ).timeout(timeout);
+    print('[LOG] Response followPlayer: statusCode=${response.statusCode}, body=${response.body}');
+    return response.statusCode == 200;
+  }
+
+  static Future<bool> checkFollowing(int playerId) async {
+    final token = await getToken();
+    final url = Uri.parse('$baseUrl/players/$playerId/is-following');
+    final response = await http.get(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    ).timeout(timeout);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['isFollowing'] == true;
+    }
+    return false;
+  }
+
+  static Future<bool> unfollowPlayer(int playerId) async {
+    final token = await getToken();
+    final url = Uri.parse('$baseUrl/players/$playerId/unfollow');
+    final response = await http.delete(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    ).timeout(timeout);
+    return response.statusCode == 200;
   }
 }

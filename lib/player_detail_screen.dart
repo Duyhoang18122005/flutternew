@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'hire_player_screen.dart';
 import 'donate_player_screen.dart';
 import 'chat_screen.dart';
+import 'api_service.dart';
 
 class _StatItem extends StatelessWidget {
   final String label;
@@ -28,22 +29,20 @@ class _TabButton extends StatelessWidget {
   const _TabButton({required this.title, this.selected = false});
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        margin: const EdgeInsets.only(right: 8),
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        decoration: BoxDecoration(
-          color: selected ? Colors.orange : Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.orange),
-        ),
-        child: Center(
-          child: Text(
-            title,
-            style: TextStyle(
-              color: selected ? Colors.white : Colors.orange,
-              fontWeight: FontWeight.bold,
-            ),
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      decoration: BoxDecoration(
+        color: selected ? Colors.orange : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.orange),
+      ),
+      child: Center(
+        child: Text(
+          title,
+          style: TextStyle(
+            color: selected ? Colors.white : Colors.orange,
+            fontWeight: FontWeight.bold,
           ),
         ),
       ),
@@ -51,12 +50,120 @@ class _TabButton extends StatelessWidget {
   }
 }
 
-class PlayerDetailScreen extends StatelessWidget {
+class PlayerDetailScreen extends StatefulWidget {
   final Map<String, dynamic> player;
   const PlayerDetailScreen({super.key, required this.player});
 
   @override
+  State<PlayerDetailScreen> createState() => _PlayerDetailScreenState();
+}
+
+class _PlayerDetailScreenState extends State<PlayerDetailScreen> {
+  int followerCount = 0;
+  int hireHours = 0;
+  bool isLoadingStats = true;
+  bool isFollowing = false;
+  bool isLoadingFollow = false;
+  int selectedTab = 0; // 0: Thông tin, 1: Đánh giá, 2: Thành tích
+
+  @override
+  void initState() {
+    super.initState();
+    _loadStats();
+    _checkFollowing();
+  }
+
+  Future<void> _loadStats() async {
+    final id = widget.player['id'] is int ? widget.player['id'] : int.tryParse(widget.player['id'].toString() ?? '');
+    if (id != null) {
+      final followers = await ApiService.fetchFollowerCount(id);
+      final hours = await ApiService.fetchHireHours(id);
+      setState(() {
+        followerCount = followers;
+        hireHours = hours;
+        isLoadingStats = false;
+      });
+    }
+  }
+
+  Future<void> _checkFollowing() async {
+    final id = widget.player['id'] is int ? widget.player['id'] : int.tryParse(widget.player['id'].toString() ?? '');
+    if (id != null) {
+      final following = await ApiService.checkFollowing(id);
+      setState(() {
+        isFollowing = following;
+      });
+    }
+  }
+
+  Future<void> _handleFollow() async {
+    setState(() { isLoadingFollow = true; });
+    final id = widget.player['id'] is int ? widget.player['id'] : int.tryParse(widget.player['id'].toString() ?? '');
+    print('[LOG] Bắt đầu gửi request theo dõi player: $id');
+    if (id != null) {
+      bool success = false;
+      final wasFollowing = isFollowing; // Lưu trạng thái trước khi gọi API
+      if (!isFollowing) {
+        success = await ApiService.followPlayer(id);
+        print('[LOG] Kết quả followPlayer: $success');
+      } else {
+        success = await ApiService.unfollowPlayer(id);
+        print('[LOG] Kết quả unfollowPlayer: $success');
+      }
+      if (success) {
+        setState(() {
+          isFollowing = !wasFollowing;
+        });
+        await _loadStats();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(!wasFollowing ? 'Đã theo dõi người chơi!' : 'Đã hủy theo dõi!')),
+        );
+      } else {
+        print('[LOG] Theo dõi thất bại! (wasFollowing: $wasFollowing)');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(!wasFollowing ? 'Theo dõi thất bại!' : 'Hủy theo dõi thất bại!')),
+        );
+      }
+    } else {
+      print('[LOG] ID player không hợp lệ!');
+    }
+    setState(() { isLoadingFollow = false; });
+  }
+
+  Widget _buildPlayerInfo(Map<String, dynamic> player) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _infoRow('Tên:', player['username']),
+          _infoRow('Tuổi:', player['age']?.toString()),
+          _infoRow('Vị trí:', player['position']),
+          _infoRow('Quốc tịch:', player['nationality']),
+          _infoRow('Giá thuê:', player['pricePerHour'] != null ? '${player['pricePerHour']} đ/h' : ''),
+          _infoRow('Trạng thái:', player['status']),
+          _infoRow('Mô tả:', player['description']),
+        ],
+      ),
+    );
+  }
+
+  Widget _infoRow(String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Text(label, style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(width: 8),
+          Expanded(child: Text(value ?? '', style: const TextStyle(color: Colors.black87))),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final player = widget.player;
     return Scaffold(
       backgroundColor: const Color(0xFFF7F7F9),
       appBar: AppBar(
@@ -120,12 +227,14 @@ class PlayerDetailScreen extends StatelessWidget {
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
+                    backgroundColor: isFollowing ? Colors.grey : Colors.orange,
                     shape: const StadiumBorder(),
                   ),
-                  onPressed: () {},
-                  icon: const Icon(Icons.favorite, color: Colors.white, size: 18),
-                  label: const Text('Theo dõi', style: TextStyle(color: Colors.white)),
+                  onPressed: isLoadingFollow ? null : _handleFollow,
+                  icon: isLoadingFollow
+                      ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                      : Icon(isFollowing ? Icons.remove_circle_outline : Icons.favorite, color: Colors.white, size: 18),
+                  label: Text(isFollowing ? 'Hủy theo dõi' : 'Theo dõi', style: const TextStyle(color: Colors.white)),
                 ),
               ],
             ),
@@ -240,11 +349,11 @@ class PlayerDetailScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: const [
-                  _StatItem(label: 'Người\nTheo dõi', value: '488'),
-                  _StatItem(label: 'Giờ\nĐược thuê', value: '2742'),
-                  _StatItem(label: '%\nHoàn thành', value: '94.34'),
-                  _StatItem(label: 'Thiết bị', value: '', icon: Icons.block),
+                children: [
+                  _StatItem(label: 'Người\nTheo dõi', value: isLoadingStats ? '...' : followerCount.toString()),
+                  _StatItem(label: 'Giờ\nĐược thuê', value: isLoadingStats ? '...' : hireHours.toString()),
+                  const _StatItem(label: '%\nHoàn thành', value: '94.34'),
+                  const _StatItem(label: 'Thiết bị', value: '', icon: Icons.block),
                 ],
               ),
             ),
@@ -253,14 +362,30 @@ class PlayerDetailScreen extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Row(
-                children: const [
-                  _TabButton(title: 'Thông tin', selected: true),
-                  _TabButton(title: 'Đánh giá'),
-                  _TabButton(title: 'Thành tích'),
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => selectedTab = 0),
+                      child: _TabButton(title: 'Thông tin', selected: selectedTab == 0),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => selectedTab = 1),
+                      child: _TabButton(title: 'Đánh giá', selected: selectedTab == 1),
+                    ),
+                  ),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => setState(() => selectedTab = 2),
+                      child: _TabButton(title: 'Thành tích', selected: selectedTab == 2),
+                    ),
+                  ),
                 ],
               ),
             ),
             const SizedBox(height: 12),
+            if (selectedTab == 0) _buildPlayerInfo(player),
             // Ảnh
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -318,24 +443,24 @@ class PlayerDetailScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            // Lưu ý
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                children: const [
-                  Text(
-                    'VUI LÒNG NHẮN TIN TRƯỚC KHI THUÊ !',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    'CHỈ DÙNG DUY NHẤT MỘT ACC PLAYDUO NÀY VÀ MỘT FACEBOOK NHƯ LINK DƯỚI',
-                    style: TextStyle(color: Colors.black54),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+            if (selectedTab == 0)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: const [
+                    Text(
+                      'VUI LÒNG NHẮN TIN TRƯỚC KHI THUÊ !',
+                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'CHỈ DÙNG DUY NHẤT MỘT ACC PLAYDUO NÀY VÀ MỘT FACEBOOK NHƯ LINK DƯỚI',
+                      style: TextStyle(color: Colors.black54),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
-            ),
             const SizedBox(height: 24),
           ],
         ),

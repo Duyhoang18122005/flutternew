@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'hire_player_screen.dart';
 import 'player_detail_screen.dart';
 import 'api_service.dart';
+import 'deposit_screen.dart';
 
 
 class HomeScreen extends StatefulWidget {
@@ -103,7 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
       filterResults = players.where((player) {
         bool matches = true;
         if (filterGame != null && filterGame!.isNotEmpty) {
-          matches &= (player['gameName'] ?? '').toLowerCase() == filterGame!.toLowerCase();
+          matches &= (player['game']?['name'] ?? '').toLowerCase() == filterGame!.toLowerCase();
         }
         if (filterRank != null && filterRank!.isNotEmpty) {
           matches &= (player['rank'] ?? '').toLowerCase() == filterRank!.toLowerCase();
@@ -371,62 +372,71 @@ class _HomeScreenState extends State<HomeScreen> {
                     padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                     child: isSearching
                         ? Row(
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: searchController,
-                                  autofocus: true,
-                                  decoration: InputDecoration(
-                                    hintText: 'Tìm kiếm player...',
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white,
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                                    suffixIcon: IconButton(
-                                      icon: const Icon(Icons.close),
-                                      onPressed: stopSearching,
-                                    ),
-                                  ),
-                                  onChanged: onSearchChanged,
-                                ),
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: searchController,
+                            autofocus: true,
+                            decoration: InputDecoration(
+                              hintText: 'Tìm kiếm player...',
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                borderSide: BorderSide.none,
                               ),
-                            ],
-                          )
-                        : Row(
-                            children: [
-                              Icon(Icons.sports_esports, color: Colors.deepOrange, size: 36),
-                              const SizedBox(width: 8),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: const [
-                                  Text(
-                                    'PLAYERDUO',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, letterSpacing: 1),
-                                  ),
-                                  Text(
-                                    'GAME COMMUNITY',
-                                    style: TextStyle(fontSize: 12, color: Colors.black54, letterSpacing: 1),
-                                  ),
-                                ],
+                              filled: true,
+                              fillColor: Colors.white,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.close),
+                                onPressed: stopSearching,
                               ),
-                              const Spacer(),
-                              IconButton(
-                                icon: const Icon(Icons.search, color: Colors.black54),
-                                onPressed: () {
-                                  setState(() {
-                                    isSearching = true;
-                                  });
-                                },
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.filter_alt_outlined, color: Colors.black54),
-                                onPressed: showFilterSheet,
-                              ),
-                            ],
+                            ),
+                            onChanged: onSearchChanged,
                           ),
+                        ),
+                      ],
+                    )
+                        : Row(
+                      children: [
+                        Icon(Icons.sports_esports, color: Colors.deepOrange, size: 36),
+                        const SizedBox(width: 8),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'PLAYERDUO',
+                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, letterSpacing: 1),
+                            ),
+                            Text(
+                              'GAME COMMUNITY',
+                              style: TextStyle(fontSize: 12, color: Colors.black54, letterSpacing: 1),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.search, color: Colors.black54),
+                          onPressed: () {
+                            setState(() {
+                              isSearching = true;
+                            });
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.filter_alt_outlined, color: Colors.black54),
+                          onPressed: showFilterSheet,
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.account_balance_wallet, color: Colors.deepOrange),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const DepositScreen()),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
                   ),
                   // Kết nối
                   Padding(
@@ -445,24 +455,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: isLoadingGames
                         ? Center(child: CircularProgressIndicator())
                         : ListView(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            children: games.map<Widget>((game) {
-                              IconData iconData = Icons.sports_esports;
-                              final name = (game['name'] ?? '').toLowerCase();
-                              if (name.contains('pubg') && name.contains('mobile')) {
-                                iconData = Icons.sports_motorsports;
-                              } else if (name.contains('pubg')) {
-                                iconData = Icons.sports_esports;
-                              } else if (name.contains('liên quân')) {
-                                iconData = Icons.sports_handball;
-                              }
-                              return _GameIcon(
-                                title: game['name'] ?? '',
-                                icon: iconData,
-                              );
-                            }).toList(),
-                          ),
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      children: games.map<Widget>((game) {
+                        IconData iconData = Icons.sports_esports;
+                        final name = (game['name'] ?? '').toLowerCase();
+                        if (name.contains('pubg') && name.contains('mobile')) {
+                          iconData = Icons.sports_motorsports;
+                        } else if (name.contains('pubg')) {
+                          iconData = Icons.sports_esports;
+                        } else if (name.contains('liên quân')) {
+                          iconData = Icons.sports_handball;
+                        }
+                        return _GameIcon(
+                          title: game['name'] ?? '',
+                          icon: iconData,
+                        );
+                      }).toList(),
+                    ),
                   ),
                   // VIP Player hoặc Kết quả tìm kiếm
                   Padding(
@@ -503,9 +513,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: _VipPlayerCard(
                                   name: player['username'] ?? '',
+                                  gameName: player['game']?['name'] ?? '',
                                   price: '${player['pricePerHour'] ?? ''} đ / giờ',
                                   description: player['description'] ?? '',
-                                  tags: '${player['gameName'] ?? ''},${player['rank'] ?? ''},${player['role'] ?? ''}',
+                                  tags: 'Rank: ${player['rank'] ?? ''}\nRole: ${player['role'] ?? ''}\nServer: ${player['server'] ?? ''}',
                                   isOnline: player['status'] == 'AVAILABLE',
                                   isGray: false,
                                 ),
@@ -532,9 +543,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: _VipPlayerCard(
                                   name: player['username'] ?? '',
+                                  gameName: player['game']?['name'] ?? '',
                                   price: '${player['pricePerHour'] ?? ''} đ / giờ',
                                   description: player['description'] ?? '',
-                                  tags: '${player['gameName'] ?? ''},${player['rank'] ?? ''},${player['role'] ?? ''}',
+                                  tags: 'Rank: ${player['rank'] ?? ''}\nRole: ${player['role'] ?? ''}\nServer: ${player['server'] ?? ''}',
                                   isOnline: player['status'] == 'AVAILABLE',
                                   isGray: false,
                                 ),
@@ -561,9 +573,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                 },
                                 child: _VipPlayerCard(
                                   name: player['username'] ?? '',
+                                  gameName: player['game']?['name'] ?? '',
                                   price: '${player['pricePerHour'] ?? ''} đ / giờ',
                                   description: player['description'] ?? '',
-                                  tags: '${player['gameName'] ?? ''},${player['rank'] ?? ''},${player['role'] ?? ''}',
+                                  tags: 'Rank: ${player['rank'] ?? ''}\nRole: ${player['role'] ?? ''}\nServer: ${player['server'] ?? ''}',
                                   isOnline: player['status'] == 'AVAILABLE',
                                   isGray: false,
                                 ),
@@ -647,6 +660,7 @@ class _GameIcon extends StatelessWidget {
 
 class _VipPlayerCard extends StatelessWidget {
   final String name;
+  final String gameName;
   final String price;
   final String description;
   final String tags;
@@ -654,6 +668,7 @@ class _VipPlayerCard extends StatelessWidget {
   final bool isGray;
   const _VipPlayerCard({
     required this.name,
+    required this.gameName,
     required this.price,
     required this.description,
     required this.tags,
@@ -714,6 +729,16 @@ class _VipPlayerCard extends StatelessWidget {
               ],
             ),
           ),
+          // Hiển thị tên game nổi bật
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+            child: Text(
+              gameName,
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
             child: Text(
@@ -723,13 +748,16 @@ class _VipPlayerCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-            child: Text(
-              tags,
-              style: const TextStyle(fontSize: 11, color: Colors.grey),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          // Cho phép phần tags co giãn
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+              child: SingleChildScrollView(
+                child: Text(
+                  tags,
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+              ),
             ),
           ),
           Padding(

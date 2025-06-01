@@ -54,7 +54,7 @@ class _RegisterPlayerScreenState extends State<RegisterPlayerScreen> {
     if (number == null) return price;
     return number.toString().replaceAllMapped(
       RegExp(r'(\d)(?=(\d{3})+(?!\d))'),
-      (Match m) => '${m[1]}.',
+          (Match m) => '${m[1]}.',
     );
   }
 
@@ -288,6 +288,7 @@ class _RegisterPlayerScreenState extends State<RegisterPlayerScreen> {
                                 availableRanks = (game['availableRanks'] as List?)?.map((e) => e.toString()).toList() ?? [];
                                 roleController.clear();
                                 rankController.clear();
+                                print('Roles for $selectedGameName: $availableRoles');
                               });
                             },
                             validator: (v) => v == null ? 'Vui lòng chọn game' : null,
@@ -516,21 +517,21 @@ class _RegisterPlayerScreenState extends State<RegisterPlayerScreen> {
                         ),
                         child: isLoading
                             ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  color: Colors.white,
-                                  strokeWidth: 2,
-                                ),
-                              )
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                             : const Text(
-                                'Đăng ký',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white,
-                                ),
-                              ),
+                          'Đăng ký',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ],
